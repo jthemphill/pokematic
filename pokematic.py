@@ -25,12 +25,20 @@ def main():
     login()
     print "Login complete."
 
-    print "Beginning poke loop...\n"
+    print "Beginning poke loop..."
 
     while 1:
         dt = random.randint(5, 300)
         time.sleep(dt)
-        pokeback_loop()
+        try:
+            pokeback_loop()
+        except urllib2.URLError:
+            print "I think my session expired."
+            print "Logging in again..."
+            setup_login()
+            login()
+            print "Resuming poke loop..."
+            pokeback_loop()
 
 def pokeback_loop():
     pokes_html = get("https://www.facebook.com/pokes")
@@ -91,7 +99,8 @@ def poke_everyone(data, args, pokers):
 
 def find_pokers(data):
     """Find everyone who poked you."""
-    pokers = re.findall('ajaxify="/ajax/pokes/poke_inline.php\?uid=(\d+)\&', data)
+    pokers = re.findall('ajaxify="/ajax/pokes/poke_inline.php\?uid=(\d+)\&',
+                        data)
     return pokers
 
 def get(url):
