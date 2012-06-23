@@ -3,7 +3,7 @@ import cookielib
 import re
 import string
 import time
-
+import random
 from getpass import getpass
 from types import InstanceType
 
@@ -23,7 +23,8 @@ def main():
     login()
 
     while 1:
-        time.sleep(5)
+        dt = random.randint(5, 300)
+        time.sleep(dt)
         pokeback_loop()
 
 def pokeback_loop():
@@ -64,15 +65,11 @@ def setup_login():
 
 def login():
     args = setup_login()
-    email = raw_input()
+    email = raw_input("email address")
     pwd = getpass()
     args += "&" + urllib.urlencode([("email", email), ("pass", pwd)])
-    
-    signin_url = "https://www.facebook.com/login.php?login_attempt=1"
-    handle = urlopen(Request(signin_url, args, header))
-    data = handle.read()
-    handle.close()
-    return data
+
+    return post("https://www.facebook.com/login.php?login_attempt=1", args)
 
 def pokes():
     return get("https://www.facebook.com/pokes")
@@ -94,9 +91,8 @@ def poke_everyone(data, args, pokers):
     """Exact retribution on all who poked you."""
 
     for poker in pokers:
-        urlopen(Request("https://www.facebook.com/ajax/pokes/poke_inline.php?__a=1",
-                        urllib.urlencode(args + [("uid", poker)]),
-                        header))
+        post("https://www.facebook.com/ajax/pokes/poke_inline.php?__a=1",
+             urllib.urlencode(args + [("uid", poker)]))
 
 def find_pokers(data):
     """Find everyone who poked you."""
@@ -116,43 +112,15 @@ def post(url, args):
 
 def setDataHash(fb_dtsg, data):
     """Return phstamp."""
-    ka = "85" # len(implodeQuery(data)) # but I think it's always 85...
-    la = ''
 
-    for i in xrange(len(fb_dtsg)):
-        la += str(ord(fb_dtsg[i]))
+    s = ''
 
-    return '1' + la + ka
+    for c in fb_dtsg:
+        s += str(ord(c))
 
-def implodeQuery(j, k='', l=True):
-        
-    m = []
-    if j is None:
-        m.append(encodeComponent(k) if l else k)
-        
-    elif type(j) == list:
-        for n in xrange(len(j)):
-            if j[n] is not None:
-                m.append(implodeQuery(j[n], (k + '[' + n + ']') if k else n))
-
-    elif type(j) == InstanceType:
-        if ('nodeName' in j) and ('nodeType' in j):
-            m.append('{node}');
-        else:
-            for p in j:
-                if j[p] is not None:
-                    m.append(implodeQuery(j[p], (k + '[' + p + ']') if k else p))
-    elif l:
-        m.append(encodeComponent(k) + '=' + encodeComponent(j))
-
-    else:
-        m.append(k + '=' + j)
-
-    return m.join('&')
-
-def encodeComponent(j):
-    return j.replace("%5D", "]").replace("%5B", "[") # find encodeURIComponent...
-
+    # At least... I think this constant is always 85. It's really the
+    # length of the URI-encoded data.
+    return '1' + s + '85'
 
 if __name__ == "__main__":
     main()
