@@ -33,7 +33,7 @@ def main():
         pokeback_loop()
 
 def pokeback_loop():
-    pokes_html = pokes()
+    pokes_html = get("https://www.facebook.com/pokes")
     
     uid = html_grab(pokes_html, 'user')
     fb_dtsg = html_grab(pokes_html, 'fb_dtsg')
@@ -58,9 +58,7 @@ def setup_login():
     """Grab the essential cookies and data needed to log in."""
 
     # Grab cookies from the main page before signing in.
-    handle = urlopen(Request("http://www.facebook.com/", None, header))
-    data = handle.read()
-    handle.close()
+    get("http://www.facebook.com/")
     
     # Extract the hidden key-value pairs in the form.
     args = re.findall(u'<input type="hidden" name="([^"]*)" value="([^"]*)"',
@@ -75,14 +73,6 @@ def login():
     args += "&" + urllib.urlencode([("email", email), ("pass", pwd)])
 
     return post("https://www.facebook.com/login.php?login_attempt=1", args)
-
-def pokes():
-    return get("https://www.facebook.com/pokes")
-        
-def printCookies():
-    for index, cookie in enumerate(cj):
-        print index, ":", cookie
-    cj.save
 
 def html_grab(data, key):
     """Find the value corresponding to key within the pokes page."""
