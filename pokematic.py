@@ -19,8 +19,13 @@ header = {"User-agent":"Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)"}
 
 def main():
 
+    print "Grabbing cookies..."
     setup_login()
+    print "Cookies found!\n"
     login()
+    print "Login complete."
+
+    print "Beginning poke loop...\n"
 
     while 1:
         dt = random.randint(5, 300)
@@ -65,7 +70,7 @@ def setup_login():
 
 def login():
     args = setup_login()
-    email = raw_input("email address")
+    email = raw_input("Email address: ")
     pwd = getpass()
     args += "&" + urllib.urlencode([("email", email), ("pass", pwd)])
 
