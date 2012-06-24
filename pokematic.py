@@ -55,7 +55,6 @@ def pokeback_loop():
         ("phstamp", phstamp),
         ]
 
-    pokes_html = pokes()
     pokers = find_pokers(pokes_html)
     poke_everyone(pokes_html, args, pokers)
 
@@ -66,7 +65,7 @@ def setup_login():
     """Grab the essential cookies and data needed to log in."""
 
     # Grab cookies from the main page before signing in.
-    get("http://www.facebook.com/")
+    data = get("http://www.facebook.com/")
     
     # Extract the hidden key-value pairs in the form.
     args = re.findall(u'<input type="hidden" name="([^"]*)" value="([^"]*)"',
