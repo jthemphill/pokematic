@@ -36,7 +36,16 @@ def main():
         except LoginError:
             print "Incorrect username or password!"
             email, pwd = get_login_info()
-            login(email, pwd)
+            
+            try:
+                print "Logging in again..."
+                login(email, pwd)
+                print "Login complete!"
+            except urllib2.URLError:
+                print "I think facebook blocked me."
+                print "Wait five minutes, then try again..."
+                time.sleep(300)
+
             continue
         
         # Pass the Turing Test >:]
@@ -88,12 +97,11 @@ def pokeback_loop(email, pwd):
 
 def login(email, pwd):
     """Create a facebook session by logging in"""
-    print "Logging in again..."
-
     args = setup_login()
     args += "&" + urlencode([("email", email), ("pass", pwd)])
 
     return post("https://www.facebook.com/login.php?login_attempt=1", args)
+
 
 def setup_login():
     """Grab the essential cookies and data needed to log in."""
@@ -112,6 +120,8 @@ def setup_login():
 
     return urlencode(args)
 
+def recover():
+    """Wait a while and log in again."""
 
 def html_grab(data, key):
     """Find the value corresponding to key within the pokes page."""
