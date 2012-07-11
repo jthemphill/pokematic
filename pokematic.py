@@ -62,7 +62,7 @@ def pokeback_loop(email, pwd):
     """Poke your frenemies back!"""
     try:
         pokes_html = get("https://www.facebook.com/pokes")
-    except urllib2.URLException:
+    except urllib2.URLError:
         print "I think my session expired."
         login(email, pwd)
         print "Resuming poke loop..."
@@ -108,7 +108,7 @@ def setup_login():
     try:
         # Grab cookies from the main page before signing in.
         data = get("http://www.facebook.com/")
-    except urllib2.URLException:
+    except urllib2.URLError:
         print "I think facebook blocked me."
         print "Wait five minutes, then try again..."
         time.sleep(300)
