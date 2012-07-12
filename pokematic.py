@@ -100,8 +100,12 @@ def login(email, pwd):
     args = setup_login()
     args += "&" + urlencode([("email", email), ("pass", pwd)])
 
-    return post("https://www.facebook.com/login.php?login_attempt=1", args)
-
+    try:
+        post("https://www.facebook.com/login.php?login_attempt=1", args)
+    except urllib2.URLError:
+        wait()
+        login(email, pwd)
+        print "Resuming poke loop..."
 
 def setup_login():
     """Grab the essential cookies and data needed to log in."""
@@ -120,8 +124,11 @@ def setup_login():
 
     return urlencode(args)
 
-def recover():
+def wait():
     """Wait a while and log in again."""
+    print "I think facebook blocked me."
+    print "Wait five minutes, then try again..."
+    time.sleep(300)
 
 def html_grab(data, key):
     """Find the value corresponding to key within the pokes page."""
@@ -168,7 +175,7 @@ def setDataHash(fb_dtsg):
     return '1' + s + '85'
     
 class LoginError(Exception):
-    """The Exception raised when a user inputs an incorrect email and password"""
+    """The Exception raised when a user inputs an incorrect email or password"""
     pass
 
 if __name__ == "__main__":
