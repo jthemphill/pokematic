@@ -103,9 +103,12 @@ def login(email, pwd):
     try:
         post("https://www.facebook.com/login.php?login_attempt=1", args)
     except urllib2.URLError:
-        wait()
+        print "I think facebook blocked` me."
+        print "Wait five minutes, then try again..."
+        time.sleep(300)
         login(email, pwd)
         print "Resuming poke loop..."
+
 
 def setup_login():
     """Grab the essential cookies and data needed to log in."""
@@ -124,11 +127,8 @@ def setup_login():
 
     return urlencode(args)
 
-def wait():
+def recover():
     """Wait a while and log in again."""
-    print "I think facebook blocked me."
-    print "Wait five minutes, then try again..."
-    time.sleep(300)
 
 def html_grab(data, key):
     """Find the value corresponding to key within the pokes page."""
@@ -170,12 +170,13 @@ def setDataHash(fb_dtsg):
     for c in fb_dtsg:
         s += str(ord(c))
 
-    # At least... I think this constant is always 85. It's really the
-    # length of the URI-encoded data.
+    # WARNING! '85' is only valid for me! It's the length of *something*...
+    # Until I figure out what that something is, just replace it with the last
+    # two digits of your phstamp if you want to use this program yourself.
     return '1' + s + '85'
     
 class LoginError(Exception):
-    """The Exception raised when a user inputs an incorrect email or password"""
+    """The Exception raised by an incorrect email/password combo"""
     pass
 
 if __name__ == "__main__":
