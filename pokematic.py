@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import urllib2
 import cookielib
 import re
@@ -19,96 +21,34 @@ header = {"User-agent":"Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)"}
 
 def main():
     
-    # Store email and password as globals.
-    # These will be in RAM for the life of the program...
-    # the paranoid may be justifiably concerned.
+    # Store email and password
     email, pwd = get_login_info()
 
     print "Logging in..."
-    login(email, pwd)
-    print "Login complete."
+
+    try:
+        uid, fb_dtsg = login(email, pwd)
+
+    except LoginError:
+        uid, fb_dtsg = login_again()
+
+    print "Login complete!"
 
     print "Beginning poke loop..."
 
-    while True:
-        try:
-            pokeback_loop(email, pwd)
-        except LoginError:
-            print "Incorrect username or password!"
-            email, pwd = get_login_info()
-            
-            try:
-                print "Logging in again..."
-                login(email, pwd)
-                print "Login complete!"
-            except urllib2.URLError:
-                print "I think facebook blocked me."
-                print "Wait five minutes, then try again..."
-                time.sleep(300)
-
-            continue
+    while 1:
+        pokeback_loop(email, pwd, uid, fb_dtsg)
         
         # Pass the Turing Test >:]
         time.sleep(random.randint(60, 300))
+
+### Login functions
 
 def get_login_info():
     """Get the user's email and password"""
     email = raw_input("Email address: ")
     pwd = getpass()
     return email, pwd
-
-
-def pokeback_loop(email, pwd):
-    """Poke your frenemies back!"""
-    try:
-        pokes_html = get("https://www.facebook.com/pokes")
-    except urllib2.URLError:
-        print "I think my session expired."
-        login(email, pwd)
-        print "Resuming poke loop..."
-        return pokeback_loop(email, pwd)
-
-    try:
-        # Grab our user id
-        uid = html_grab(pokes_html, 'user')
-        
-        # Grab our data signature
-        fb_dtsg = html_grab(pokes_html, 'fb_dtsg')
-
-    except ValueError:
-        # A ValueError typically indicates that the login information was
-        # incorrect.
-        raise LoginError()
-    
-    # Grab our signature's "hash"
-    phstamp = setDataHash(fb_dtsg)
-    
-    # The arguments facebook expects from a poke request.
-    args = [
-            ("pokeback", 1),
-            ("nctr[_mod]", "pagelet_pokes"),
-            ("fb_dtsg", fb_dtsg),
-            ("__user", uid),
-            ("phstamp", phstamp),
-           ]
-
-    pokers = find_pokers(pokes_html)
-    poke_everyone(pokes_html, args, pokers)
-
-def login(email, pwd):
-    """Create a facebook session by logging in"""
-    args = setup_login()
-    args += "&" + urlencode([("email", email), ("pass", pwd)])
-
-    try:
-        post("https://www.facebook.com/login.php?login_attempt=1", args)
-    except urllib2.URLError:
-        print "I think facebook blocked` me."
-        print "Wait five minutes, then try again..."
-        time.sleep(300)
-        login(email, pwd)
-        print "Resuming poke loop..."
-
 
 def setup_login():
     """Grab the essential cookies and data needed to log in."""
@@ -127,30 +67,96 @@ def setup_login():
 
     return urlencode(args)
 
-def recover():
-    """Wait a while and log in again."""
+def login(email, pwd):
+    """Create a facebook session by logging in"""
+    args = setup_login()
+    args += "&" + urlencode([("email", email), ("pass", pwd)])
 
-def html_grab(data, key):
-    """Find the value corresponding to key within the pokes page."""
-    searchString = '"{0}":"'.format(key)
-    a = string.index(data, searchString) + len(searchString)
-    b = a + string.index(data[a:], '"')
-    return data[a:b]
+    try:
+        homepage = post("https://www.facebook.com/login.php?login_attempt=1",
+                        args)
+
+    except urllib2.URLError:
+        recover(email, pwd)
+        homepage = login(email, pwd)
+
+    try:
+        # Grab our user id
+        uid = html_grab(homepage, 'user')
+        
+        # Grab our data signature
+        fb_dtsg = html_grab(homepage, 'fb_dtsg')
+
+    except LoginError:
+        return login_again()
+
+    return uid, fb_dtsg
+
+def login_again():
+    """Get the user's login information again."""
+
+    print "Incorrect username or password!"
+    email, pwd = get_login_info()
+    
+    try:
+        print "Logging in again..."
+        return login(email, pwd)
+        print "Login complete!"
+
+    except urllib2.URLError:
+        return recover(email, pwd)
+
+def recover(email, pwd):
+    """Wait a while and login again."""
+
+    print "I think facebook blocked me."
+    print "Wait five minutes, then try again..."
+    time.sleep(300)
+    return login()
+
+### Data processing and poking functions
+
+def pokeback_loop(email, pwd, uid, fb_dtsg):
+    """POKES FOR THE POKE GOD."""
+    try:
+        pokes_html = get("https://www.facebook.com/pokes")
+
+    except urllib2.URLError:
+        print "I think my session expired."
+        uid, fb_dtsg = login(email, pwd)
+        print "Resuming poke loop..."
+        return pokeback_loop(email, pwd)
+
+    # Grab our signature's "hash"
+    phstamp = set_data_hash(fb_dtsg)
+    
+    # The arguments facebook expects from a poke request.
+    args = [
+            ("pokeback", 1),
+            ("nctr[_mod]", "pagelet_pokes"),
+            ("fb_dtsg", fb_dtsg),
+            ("__user", uid),
+            ("phstamp", phstamp),
+           ]
+
+    pokers = find_pokers(pokes_html)
+    poke_everyone(pokes_html, args, pokers)
 
 
 def poke_everyone(data, args, pokers):
     """Exact retribution on all who poked you."""
-    for poker in pokers:
+    for victim in pokers:
         post("https://www.facebook.com/ajax/pokes/poke_inline.php?__a=1",
-             urlencode(args + [("uid", poker)]))
-        print "Probably poked {0} at {1}".format(poker,
+             urlencode(args + [("uid", victim)]))
+        print "Probably poked {0} at {1}".format(victim,
                                                  time.strftime("%x, %H:%M:%S"))
 
 def find_pokers(data):
     """Find everyone who poked you."""
-    pokers = re.findall('ajaxify="/ajax/pokes/poke_inline.php\?uid=(\d+)\&',
-                        data)
-    return pokers
+    return re.findall('ajaxify="/ajax/pokes/poke_inline.php\?uid=(\d+)\&',
+                      data)
+
+### HTTP request wrapper functions
 
 def get(url):
     """Submit a GET request"""
@@ -163,21 +169,42 @@ def post(url, args):
     handle.close()
     return data
 
-def setDataHash(fb_dtsg):
+### Data processing
+
+def html_grab(data, key):
+    """Find the value corresponding to key within the pokes page."""
+    try:
+        searchString = '"{0}":"'.format(key)
+        a = string.index(data, searchString) + len(searchString)
+        b = a + string.index(data[a:], '"')
+        return data[a:b]
+
+    except ValueError:
+        # A ValueError typically indicates that the login information
+        # was incorrect.
+        raise LoginError()
+
+### Ported JavaScript functions
+
+def set_data_hash(fb_dtsg):
     """Return what facebook calls a 'hash' of your session signature."""
     s = ''
 
     for c in fb_dtsg:
         s += str(ord(c))
 
-    # WARNING! '85' is only valid for me! It's the length of *something*...
-    # Until I figure out what that something is, just replace it with the last
-    # two digits of your phstamp if you want to use this program yourself.
-    return '1' + s + '85'
-    
+    # Not totally sure what that '90' is. It seems to be the length of
+    # a string...
+    return '1' + s + '90'
+
+
+### New Exceptions
+
 class LoginError(Exception):
     """The Exception raised by an incorrect email/password combo"""
     pass
+
+### Runtime boilerplate
 
 if __name__ == "__main__":
     main()
